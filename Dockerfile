@@ -24,15 +24,20 @@ ENV FIL_PROOFS_PARAMETER_CACHE /storage/filecoin-proof-parameters
 ENV IPFS_GATEWAY https://proof-parameters.s3.cn-south-1.jdcloud-oss.com/ipfs/
 ENV TMPDIR /storage/lotuswork/tmpdir
 
-
 RUN git clone -b interopnet https://github.com/filecoin-project/lotus.git &&\
     cd lotus &&\
     make clean all &&\
     make install &&\
     make build bench
 
-#VOLUME ["/home","/root","/var"]
+VOLUME ["/storage","/root","/var"]
 
+RUN sed -i "s/archive.ubuntu.com/mirrors.aliyun.com/g" /etc/apt/sources.list \
+  && sed -i "s/security.ubuntu.com/mirrors.aliyun.com/g" /etc/apt/sources.list \
+  && rm -f /etc/apt/sources.list.d/*
+
+COPY docker-entrypoint.sh /docker-entrypoint.sh
+RUN chmod +x /docker-entrypoint.sh
 
 # API port
 EXPOSE 1234/tcp
@@ -46,16 +51,12 @@ EXPOSE 2345/tcp
 # API port
 EXPOSE 3456/tcp
 
+ENV IPFS_GATEWAY=https://proof-parameters.s3.cn-south-1.jdcloud-oss.com/ipfs/
 
+ENV FIL_PROOFS_MAXIMIZE_CACHING=1
 
-RUN sed -i "s/archive.ubuntu.com/mirrors.aliyun.com/g" /etc/apt/sources.list \
-  && sed -i "s/security.ubuntu.com/mirrors.aliyun.com/g" /etc/apt/sources.list \
-  && rm -f /etc/apt/sources.list.d/*
-
-COPY docker-entrypoint.sh /docker-entrypoint.sh
-RUN chmod +x /docker-entrypoint.sh
-
-WORKDIR /storage
+#WORKDIR /storage
+WORKDIR /lotus
 
 #ENTRYPOINT ["/docker-entrypoint.sh"]
-CMD ["/bin/bash"]
+CMD ["./lotus", "daemon", "&"]
