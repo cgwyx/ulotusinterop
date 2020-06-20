@@ -10,6 +10,8 @@ RUN add-apt-repository ppa:longsleep/golang-backports \
 RUN curl -sSf https://sh.rustup.rs | sh -s -- -y
 RUN echo "export PATH=~/.cargo/bin:$PATH" >> ~/.bashrc
 
+RUN mkdir -p /storage &&\
+    mkdir -p /storage/tmpdir
 
 ENV LOTUS_STORAGE_PATH /storage/.lotusstorage
 ENV LOTUS_PATH /storage/.lotus
