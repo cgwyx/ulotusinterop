@@ -10,19 +10,13 @@ RUN add-apt-repository ppa:longsleep/golang-backports \
 RUN curl -sSf https://sh.rustup.rs | sh -s -- -y
 RUN echo "export PATH=~/.cargo/bin:$PATH" >> ~/.bashrc
 
-RUN mkdir -p /storage \
-  && mkdir -p /storage/lotuswork/lotusstorage \
-  && mkdir -p /storage/lotuswork/lotus \
-  && mkdir -p /storage/lotuswork/lotusworker \
-  && mkdir -p /storage/filecoin-proof-parameters \
-  && mkdir -p /storage/lotuswork/tmpdir
 
-ENV LOTUS_STORAGE_PATH /storage/lotuswork/lotusstorage
-ENV LOTUS_PATH /storage/lotuswork/lotus
-ENV WORKER_PATH /storage/lotuswork/lotusworker
+ENV LOTUS_STORAGE_PATH /storage/.lotusstorage
+ENV LOTUS_PATH /storage/.lotus
+ENV WORKER_PATH /storage/.lotusworker
 ENV FIL_PROOFS_PARAMETER_CACHE /storage/filecoin-proof-parameters
 ENV IPFS_GATEWAY https://proof-parameters.s3.cn-south-1.jdcloud-oss.com/ipfs/
-ENV TMPDIR /storage/lotuswork/tmpdir
+ENV TMPDIR /storage/.tmpdir
 
 RUN git clone -b interopnet https://github.com/filecoin-project/lotus.git &&\
     cd lotus &&\
