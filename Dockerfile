@@ -16,7 +16,7 @@ ENV LOTUS_PATH /storage/.lotus
 ENV WORKER_PATH /storage/.lotusworker
 ENV FIL_PROOFS_PARAMETER_CACHE /storage/filecoin-proof-parameters
 ENV IPFS_GATEWAY https://proof-parameters.s3.cn-south-1.jdcloud-oss.com/ipfs/
-ENV TMPDIR /storage/.tmpdir
+ENV TMPDIR /storage/tmpdir
 
 RUN git clone -b interopnet https://github.com/filecoin-project/lotus.git &&\
     cd lotus &&\
