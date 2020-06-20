@@ -33,6 +33,7 @@ RUN sed -i "s/archive.ubuntu.com/mirrors.aliyun.com/g" /etc/apt/sources.list \
   && rm -f /etc/apt/sources.list.d/*
 
 COPY docker-entrypoint.sh /docker-entrypoint.sh
+
 RUN chmod +x /docker-entrypoint.sh
 
 # API port
@@ -50,6 +51,12 @@ EXPOSE 3456/tcp
 ENV IPFS_GATEWAY=https://proof-parameters.s3.cn-south-1.jdcloud-oss.com/ipfs/
 
 ENV FIL_PROOFS_MAXIMIZE_CACHING=1
+
+
+
+# time adjust
+ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
+ntpdate ntp.aliyun.com
 
 #WORKDIR /storage
 WORKDIR /lotus
