@@ -10,19 +10,15 @@ RUN add-apt-repository ppa:longsleep/golang-backports \
 RUN curl -sSf https://sh.rustup.rs | sh -s -- -y
 RUN echo "export PATH=~/.cargo/bin:$PATH" >> ~/.bashrc
 
-RUN mkdir -p /storage \
-  && mkdir -p /storage/lotuswork/lotusstorage \
-  && mkdir -p /storage/lotuswork/lotus \
-  && mkdir -p /storage/lotuswork/lotusworker \
-  && mkdir -p /storage/filecoin-proof-parameters \
-  && mkdir -p /storage/lotuswork/tmpdir
+RUN mkdir -p /storage &&\
+    mkdir -p /storage/tmpdir
 
-ENV LOTUS_STORAGE_PATH /storage/lotuswork/lotusstorage
-ENV LOTUS_PATH /storage/lotuswork/lotus
-ENV WORKER_PATH /storage/lotuswork/lotusworker
+ENV LOTUS_STORAGE_PATH /storage/.lotusstorage
+ENV LOTUS_PATH /storage/.lotus
+ENV WORKER_PATH /storage/.lotusworker
 ENV FIL_PROOFS_PARAMETER_CACHE /storage/filecoin-proof-parameters
 ENV IPFS_GATEWAY https://proof-parameters.s3.cn-south-1.jdcloud-oss.com/ipfs/
-ENV TMPDIR /storage/lotuswork/tmpdir
+ENV TMPDIR /storage/tmpdir
 
 RUN git clone -b interopnet https://github.com/filecoin-project/lotus.git &&\
     cd lotus &&\
@@ -37,6 +33,7 @@ RUN sed -i "s/archive.ubuntu.com/mirrors.aliyun.com/g" /etc/apt/sources.list \
   && rm -f /etc/apt/sources.list.d/*
 
 COPY docker-entrypoint.sh /docker-entrypoint.sh
+
 RUN chmod +x /docker-entrypoint.sh
 
 # API port
@@ -54,6 +51,12 @@ EXPOSE 3456/tcp
 ENV IPFS_GATEWAY=https://proof-parameters.s3.cn-south-1.jdcloud-oss.com/ipfs/
 
 ENV FIL_PROOFS_MAXIMIZE_CACHING=1
+
+
+
+# time adjust
+RUN ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime &&\
+    ntpdate ntp.aliyun.com
 
 #WORKDIR /storage
 WORKDIR /lotus
