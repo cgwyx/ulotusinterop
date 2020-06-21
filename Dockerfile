@@ -1,46 +1,59 @@
-FROM docker.io/ubuntu:18.04
+# build container stage
+FROM golang:1.14.2 AS build-env
 
-RUN apt-get update
-RUN apt-get install curl software-properties-common -y
+# branch or tag of the lotus version to build
+ARG BRANCH=interopnet
+#ARG BRANCH=master
 
-RUN add-apt-repository ppa:longsleep/golang-backports \
-  && apt-get update \
-  && apt-get install golang-go gcc git bzr jq pkg-config mesa-opencl-icd ocl-icd-opencl-dev cargo llvm clang opencl-headers wget -y
+RUN echo "Building lotus from branch $BRANCH"
 
-RUN curl -sSf https://sh.rustup.rs | sh -s -- -y
-RUN echo "export PATH=~/.cargo/bin:$PATH" >> ~/.bashrc
+RUN apt-get update -y && \
+    apt-get install sudo curl git mesa-opencl-icd ocl-icd-opencl-dev gcc git bzr jq pkg-config -y
 
-RUN mkdir -p /storage &&\
-    mkdir -p /storage/tmpdir
+WORKDIR /
 
-ENV LOTUS_STORAGE_PATH /storage/.lotusstorage
-ENV LOTUS_PATH /storage/.lotus
-ENV WORKER_PATH /storage/.lotusworker
-ENV FIL_PROOFS_PARAMETER_CACHE /storage/filecoin-proof-parameters
-ENV IPFS_GATEWAY https://proof-parameters.s3.cn-south-1.jdcloud-oss.com/ipfs/
-ENV TMPDIR /storage/tmpdir
-
-RUN git clone -b interopnet https://github.com/filecoin-project/lotus.git &&\
+RUN git clone -b $BRANCH https://github.com/filecoin-project/lotus.git &&\
     cd lotus &&\
     make clean all &&\
     make install &&\
     make build bench
 
-VOLUME ["/storage","/root","/var"]
 
-RUN sed -i "s/archive.ubuntu.com/mirrors.aliyun.com/g" /etc/apt/sources.list \
-  && sed -i "s/security.ubuntu.com/mirrors.aliyun.com/g" /etc/apt/sources.list \
-  && rm -f /etc/apt/sources.list.d/*
+# runtime container stage
+FROM ubuntu:18.04
 
-COPY docker-entrypoint.sh /docker-entrypoint.sh
+# Instead of running apt-get just copy the certs and binaries that keeps the runtime image nice and small
+# RUN apt-get update && \
+#    apt-get install sudo ca-certificates mesa-opencl-icd ocl-icd-opencl-dev -y && \
+#    rm -rf /var/lib/apt/lists/*
+COPY --from=build-env /lotus /lotus
+COPY --from=build-env /etc/ssl/certs /etc/ssl/certs
+#COPY LOTUS_VERSION /VERSION
 
-RUN chmod +x /docker-entrypoint.sh
+COPY --from=build-env /lib/x86_64-linux-gnu/libdl.so.2 /lib/libdl.so.2
+COPY --from=build-env /lib/x86_64-linux-gnu/libutil.so.1 /lib/libutil.so.1 
+COPY --from=build-env /usr/lib/x86_64-linux-gnu/libOpenCL.so.1.0.0 /lib/libOpenCL.so.1
+COPY --from=build-env /lib/x86_64-linux-gnu/librt.so.1 /lib/librt.so.1
+COPY --from=build-env /lib/x86_64-linux-gnu/libgcc_s.so.1 /lib/libgcc_s.so.1
+
+#COPY config/config.toml /root/config.toml
+#COPY scripts/entrypoint /bin/entrypoint
+
+RUN chmod a+x /lotus/lotus && \
+    chmod a+x /lotus/lotus-storage-miner && \
+    chmod a+x /lotus/lotus-seal-worker && \
+    chmod a+x /lotus/bench
+    ln -s /lotus/lotus /usr/bin/lotus
+    ln -s /lotus/lotus-storage-miner /usr/bin/lotus-storage-miner
+    ln -s /lotus/lotus-seal-worker /usr/bin/lotus-seal-worker
+
+#chmod u+x /lotus
+
+VOLUME ["/root","/var"]
+
 
 # API port
 EXPOSE 1234/tcp
-
-# P2P port
-EXPOSE 1347/tcp
 
 # API port
 EXPOSE 2345/tcp
@@ -48,18 +61,22 @@ EXPOSE 2345/tcp
 # API port
 EXPOSE 3456/tcp
 
+# P2P port
+EXPOSE 1347/tcp
+
+
 ENV IPFS_GATEWAY=https://proof-parameters.s3.cn-south-1.jdcloud-oss.com/ipfs/
 
 ENV FIL_PROOFS_MAXIMIZE_CACHING=1
 
+RUN ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime &&\
+    ntpdate ntp.aliyun.com
 
 
-# time adjust
-ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
-ntpdate ntp.aliyun.com
-
-#WORKDIR /storage
 WORKDIR /lotus
 
-#ENTRYPOINT ["/docker-entrypoint.sh"]
+
 CMD ["./lotus", "daemon", "&"]
+#ENTRYPOINT ["/bin/entrypoint"]
+#CMD ["-d"]
+
